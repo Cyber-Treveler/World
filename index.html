@@ -164,159 +164,77 @@
 
 
 <!-- Travelers AI Chat -->
-<section class="content wrap" id="travelers-ai">
+<!-- ============ AI PICKER — replace your chat section with this ============ -->
+<section class="content wrap" id="ask-ai">
   <div class="section-top">
     <div>
-      <div class="index">05 / Travelers AI</div>
-      <h2>Chat with<br>Travelers AI.</h2>
+      <div class="index">05 / Ask AI</div>
+      <h2>Pick your AI.<br>Ask anything.</h2>
     </div>
-    <p class="note">
-      Ask anything about travel, ideas, destinations, and exploration.
-    </p>
+    <p class="note">Choose an assistant and type your question — it will open in a new tab with your question ready.</p>
   </div>
 
-  <div class="chat-box">
-    <div class="chat-header">
-      <span class="ai-dot"></span>
-      <strong>Travelers AI</strong>
-    </div>
+  <div class="ai-box">
+    <label class="ai-label" for="aiSelect">Assistant</label>
+    <select id="aiSelect"></select>
 
-    <div class="messages" id="chatMessages">
-      <div class="message bot">
-        Hello, Traveler! 🌍
-      </div>
-    </div>
+    <label class="ai-label" for="aiQuestion">Your question</label>
+    <textarea id="aiQuestion" rows="4" maxlength="4000" placeholder="e.g. Plan a 3-day itinerary for Lisbon on a budget…"></textarea>
 
-    <div class="chat-input">
-      <input
-        type="text"
-        id="chatInput"
-        placeholder="Write your message..."
-      >
-      <button onclick="sendMessage()">
-        Send ↗
-      </button>
+    <div class="ai-actions">
+      <button class="ai-go" id="aiGo" type="button">Open AI <span>↗</span></button>
+      <span class="ai-hint" id="aiHint"></span>
     </div>
   </div>
 </section>
 
 <style>
-.chat-box{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:20px;
-  overflow:hidden;
-}
-
-.chat-header{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:18px 24px;
-  border-bottom:1px solid var(--line);
-  font-size:14px;
-}
-
-.ai-dot{
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  background:var(--lime);
-  box-shadow:0 0 12px var(--lime);
-}
-
-.messages{
-  padding:24px;
-  min-height:300px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-
-.message{
-  max-width:80%;
-  padding:14px 18px;
-  border-radius:16px;
-  font-size:14px;
-  line-height:1.6;
-}
-
-.message.user{
-  align-self:flex-end;
-  background:var(--lime);
-  color:#11140a;
-}
-
-.message.bot{
-  align-self:flex-start;
-  background:#1a1d28;
-  border:1px solid var(--line);
-}
-
-.chat-input{
-  display:flex;
-  gap:10px;
-  padding:20px;
-  border-top:1px solid var(--line);
-}
-
-.chat-input input{
-  flex:1;
-  background:#0b0e15;
-  border:1px solid var(--line);
-  color:white;
-  padding:14px 16px;
-  outline:none;
-  border-radius:12px;
-}
-
-.chat-input input:focus{
-  border-color:var(--lime);
-}
-
-.chat-input button{
-  background:var(--lime);
-  color:#11140a;
-  border:0;
-  padding:14px 22px;
-  border-radius:12px;
-  cursor:pointer;
-  font-weight:bold;
-}
-
-.chat-input button:hover{
-  filter:brightness(.9);
-}
+.ai-box{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:8px;max-width:720px}
+.ai-label{font:11px monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--lime)}
+.ai-box select,.ai-box textarea{background:#0b0e15;border:1px solid var(--line);color:var(--text);padding:14px 16px;border-radius:12px;font-size:14px;font-family:Arial,Helvetica,sans-serif;outline:none;width:100%}
+.ai-box select:focus,.ai-box textarea:focus{border-color:var(--lime)}
+.ai-box textarea{resize:vertical;min-height:90px;line-height:1.6}
+.ai-actions{display:flex;align-items:center;gap:18px;margin-top:10px;flex-wrap:wrap}
+.ai-go{display:inline-flex;gap:18px;align-items:center;padding:15px 20px;background:var(--lime);color:#11140a;border:0;border-radius:10px;font-size:12px;font-weight:bold;cursor:pointer;font-family:Arial,Helvetica,sans-serif}
+.ai-go:hover{filter:brightness(.9)}
+.ai-hint{font-size:12px;color:var(--muted)}
 </style>
 
 <script>
-function sendMessage() {
-  const input = document.getElementById("chatInput");
-  const messages = document.getElementById("chatMessages");
+const AIS = {
+  chatgpt:    { name: "ChatGPT (OpenAI)",      make: q => "https://chatgpt.com/?q=" + q },
+  mistral:    { name: "Le Chat (Mistral)",     make: q => "https://chat.mistral.ai/chat?q=" + q },
+  perplexity: { name: "Perplexity",            make: q => "https://www.perplexity.ai/search?q=" + q },
+  grok:       { name: "Grok (xAI)",            make: q => "https://grok.com/?q=" + q },
+  claude:     { name: "Claude (Anthropic)",    make: q => "https://claude.ai/new?q=" + q },
+  gemini:     { name: "Gemini (Google)",       make: () => "https://gemini.google.com/app", clipboard: true },
+  deepseek:   { name: "DeepSeek",              make: () => "https://chat.deepseek.com",     clipboard: true },
+  kimi:       { name: "Kimi (Moonshot)",       make: () => "https://www.kimi.com",          clipboard: true }
+};
 
-  const text = input.value.trim();
+const sel = document.getElementById("aiSelect");
+Object.entries(AIS).forEach(([id, ai]) => {
+  const o = document.createElement("option");
+  o.value = id;
+  o.textContent = ai.name + (ai.clipboard ? "  — paste manually" : "");
+  sel.appendChild(o);
+});
 
-  if (!text) return;
+document.getElementById("aiGo").addEventListener("click", async () => {
+  const text = document.getElementById("aiQuestion").value.trim();
+  const hint = document.getElementById("aiHint");
+  if (!text) { hint.textContent = "Type your question first."; return; }
 
-  const userMsg = document.createElement("div");
-  userMsg.className = "message user";
-  userMsg.textContent = text;
-  messages.appendChild(userMsg);
+  const ai = AIS[sel.value];
+  const url = ai.make(encodeURIComponent(text));
 
-  input.value = "";
-
-  setTimeout(() => {
-    const botMsg = document.createElement("div");
-    botMsg.className = "message bot";
-    botMsg.textContent = "Hello, Traveler! 🌍";
-    messages.appendChild(botMsg);
-
-    messages.scrollTop = messages.scrollHeight;
-  }, 500);
-}
-
-document.getElementById("chatInput").addEventListener("keypress", e => {
-  if (e.key === "Enter") sendMessage();
+  if (ai.clipboard) {
+    try { await navigator.clipboard.writeText(text); } catch (e) {}
+    hint.textContent = "Question copied — paste it with Ctrl+V on the " + ai.name + " page.";
+  } else {
+    hint.textContent = "Opening " + ai.name + "…";
+  }
+  window.open(url, "_blank", "noopener");
 });
 </script>
 </body>
